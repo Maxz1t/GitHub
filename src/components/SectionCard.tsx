@@ -1,21 +1,36 @@
 import React from 'react';
 import { Section } from '../data/sections';
-import { useSpeech } from '../hooks/useSpeech';
+import { SpeechSettings } from '../hooks/useSpeech';
+import { VoiceSettings } from './VoiceSettings';
 
 interface SectionCardProps {
   section: Section;
   illustration: React.ReactNode;
   isActive: boolean;
+  isSpeaking: boolean;
+  settings: SpeechSettings;
+  onSpeak: (text: string) => void;
+  onStop: () => void;
+  onUpdateSettings: (partial: Partial<SpeechSettings>) => void;
+  onPreview: (text?: string) => void;
 }
 
-export const SectionCard: React.FC<SectionCardProps> = ({ section, illustration, isActive }) => {
-  const { speak, stop, isSpeaking } = useSpeech();
-
+export const SectionCard: React.FC<SectionCardProps> = ({
+  section,
+  illustration,
+  isActive,
+  isSpeaking,
+  settings,
+  onSpeak,
+  onStop,
+  onUpdateSettings,
+  onPreview,
+}) => {
   const handleSpeak = () => {
     if (isSpeaking) {
-      stop();
+      onStop();
     } else {
-      speak(section.speechText);
+      onSpeak(section.speechText);
     }
   };
 
@@ -74,7 +89,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, illustration,
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
-            Остановить озвучку
+            ⏹ Остановить озвучку
           </>
         ) : (
           <>
@@ -85,6 +100,13 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, illustration,
           </>
         )}
       </button>
+
+      {/* Voice Settings Panel */}
+      <VoiceSettings
+        settings={settings}
+        onUpdate={onUpdateSettings}
+        onPreview={onPreview}
+      />
     </div>
   );
 };

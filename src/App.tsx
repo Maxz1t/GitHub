@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { sections } from './data/sections';
 import { SectionCard } from './components/SectionCard';
+import { useSpeech } from './hooks/useSpeech';
 import {
   RepoIllustration,
   CommitIllustration,
@@ -34,11 +35,16 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHero, setShowHero] = useState(true);
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
+  const { speak, stop, isSpeaking, settings, updateSettings, preview } = useSpeech();
 
   useEffect(() => {
-    // Mark section as visited
     setCompletedSections(prev => new Set([...prev, activeSection]));
   }, [activeSection]);
+
+  // Stop speech when changing sections
+  useEffect(() => {
+    stop();
+  }, [activeSection, stop]);
 
   const handleStartLearning = () => {
     setShowHero(false);
@@ -66,7 +72,7 @@ function App() {
                 Изучите GitHub простыми словами
               </p>
               <p className="text-gray-400 mb-8 text-lg">
-                С картинками • С озвучкой • Без воды
+                С картинками • С озвучкой • С настройками голоса
               </p>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -101,7 +107,7 @@ function App() {
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <span className="text-3xl mb-2 block">🔊</span>
               <p className="text-white font-medium">С озвучкой</p>
-              <p className="text-gray-400 text-sm">Нажмите кнопку — послушайте</p>
+              <p className="text-gray-400 text-sm">Настройка скорости, тона, голоса</p>
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <span className="text-3xl mb-2 block">💡</span>
@@ -123,7 +129,10 @@ function App() {
             <GithubLogo className="w-7 h-7" />
             <div>
               <h1 className="text-lg md:text-xl font-bold">GitHub Помощник</h1>
-              <p className="text-xs text-gray-400 hidden sm:block">Простыми словами • {completedSections.size}/{sections.length} пройдено</p>
+              <p className="text-xs text-gray-400 hidden sm:block">
+                Простыми словами • {completedSections.size}/{sections.length} пройдено
+                {isSpeaking && <span className="ml-2 text-indigo-400 animate-pulse">🔊 озвучка...</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -212,6 +221,12 @@ function App() {
             section={sections.find(s => s.id === activeSection)!}
             illustration={illustrations[activeSection]}
             isActive={true}
+            isSpeaking={isSpeaking}
+            settings={settings}
+            onSpeak={speak}
+            onStop={stop}
+            onUpdateSettings={updateSettings}
+            onPreview={preview}
           />
 
           {/* Navigation buttons */}
