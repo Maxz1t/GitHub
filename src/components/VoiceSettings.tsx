@@ -42,18 +42,24 @@ export const VoiceSettings: React.FC<VoiceSettingsProps> = ({ settings, onUpdate
                 ({voices.length} доступно)
               </span>
             </label>
-            <select
-              value={settings.voiceURI}
-              onChange={(e) => onUpdate({ voiceURI: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">По умолчанию (Google)</option>
-              {voices.map((voice) => (
-                <option key={voice.voiceURI} value={voice.voiceURI}>
-                  {voice.name} ({voice.lang})
-                </option>
-              ))}
-            </select>
+            
+            {voices.length > 0 ? (
+              <select
+                value={settings.voiceURI}
+                onChange={(e) => onUpdate({ voiceURI: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {voices.map((voice) => (
+                  <option key={voice.voiceURI} value={voice.voiceURI}>
+                    {voice.name} ({voice.lang})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                ⚠️ Русские голоса не найдены. Используйте Chrome для лучшей поддержки.
+              </div>
+            )}
           </div>
 
           {/* Rate slider */}

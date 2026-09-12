@@ -89,19 +89,12 @@ export function useSpeech() {
     utterance.pitch = settings.pitch;
     utterance.volume = settings.volume;
 
-    // Apply selected voice
+    // Apply selected voice if specified
     if (settings.voiceURI) {
       const voices = window.speechSynthesis.getVoices();
       const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-      }
-    } else {
-      // Find Russian voice
-      const voices = window.speechSynthesis.getVoices();
-      const ruVoice = voices.find(v => v.lang.startsWith('ru'));
-      if (ruVoice) {
-        utterance.voice = ruVoice;
       }
     }
 
