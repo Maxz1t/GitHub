@@ -1,14 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
-export type TTSEngine = 'browser' | 'puter';
-
 export interface SpeechSettings {
   rate: number;       // 0.3 - 2.5
-  pitch: number;      // 0.1 - 2.0 (только для browser)
+  pitch: number;      // 0.1 - 2.0
   volume: number;     // 0 - 1
-  voiceURI: string;   // ID голоса (для browser)
-  engine: TTSEngine;  // 'browser' или 'puter'
-  puterVoice: string; // ID голоса для puter
+  voiceURI: string;   // ID голоса
 }
 
 const DEFAULT_SETTINGS: SpeechSettings = {
@@ -16,11 +12,9 @@ const DEFAULT_SETTINGS: SpeechSettings = {
   pitch: 1.0,
   volume: 1.0,
   voiceURI: '',
-  engine: 'puter',
-  puterVoice: 'openai:alloy',
 };
 
-const STORAGE_KEY = 'github-helper-speech-settings-v4';
+const STORAGE_KEY = 'github-helper-speech-settings-v5';
 
 function loadSettings(): SpeechSettings {
   try {
@@ -65,16 +59,16 @@ export function useRussianVoices() {
   return voices;
 }
 
-// Проверить доступность Puter.js
-function isPuterAvailable(): boolean {
-  return typeof window !== 'undefined' && !!(window as any).puter?.ai?.txt2speech;
+// Найти Google голос в списке
+function findGoogleVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  // Ищем голос с "Google" в имени
+  return voices.find(v => v.name.toLowerCase().includes('google'));
 }
 
 export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [settings, setSettings] = useState<SpeechSettings>(loadSettings);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const updateSettings = useCallback((partial: Partial<SpeechSettings>) => {
     setSettings(prev => {
@@ -86,69 +80,13 @@ export function useSpeech() {
 
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
     setIsSpeaking(false);
   }, []);
 
-  // Озвучка через Puter.js (OpenAI / AWS Polly)
-  const speakWithPuter = useCallback(async (text: string) => {
-    if (!isPuterAvailable()) {
-      console.warn('Puter.js недоступен, переключаемся на браузерный TTS');
-      speakWithBrowser(text);
-      return;
-    }
-
-    try {
-      setIsSpeaking(true);
-      
-      const voiceId = settings.puterVoice;
-      let provider = 'openai';
-      let voice = 'alloy';
-
-      if (voiceId.startsWith('polly:')) {
-        provider = 'polly';
-        voice = voiceId.replace('polly:', '');
-      } else if (voiceId.startsWith('openai:')) {
-        provider = 'openai';
-        voice = voiceId.replace('openai:', '');
-      }
-
-      const audio = await (window as any).puter.ai.txt2speech(text, {
-        provider: provider,
-        voice: voice,
-        engine: 'neural',
-        language: 'ru-RU',
-      });
-
-      audio.playbackRate = settings.rate;
-      audio.volume = settings.volume;
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setIsSpeaking(false);
-        audioRef.current = null;
-      };
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        audioRef.current = null;
-      };
-
-      audio.play();
-    } catch (error) {
-      console.error('Puter TTS error:', error);
-      setIsSpeaking(false);
-      // Fallback на браузер
-      speakWithBrowser(text);
-    }
-  }, [settings]);
-
-  // Озвучка через Web Speech API (системные голоса)
-  const speakWithBrowser = useCallback((text: string) => {
+  const speak = useCallback((text: string) => {
     if (!('speechSynthesis' in window)) return;
+
+    stop();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ru-RU';
@@ -156,11 +94,25 @@ export function useSpeech() {
     utterance.pitch = settings.pitch;
     utterance.volume = settings.volume;
 
+    // Apply selected voice
     if (settings.voiceURI) {
       const voices = window.speechSynthesis.getVoices();
       const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
       if (selectedVoice) {
         utterance.voice = selectedVoice;
+      }
+    } else {
+      // По умолчанию ищем Google голос
+      const voices = window.speechSynthesis.getVoices();
+      const googleVoice = findGoogleVoice(voices);
+      if (googleVoice) {
+        utterance.voice = googleVoice;
+      } else {
+        // Если нет Google, берём первый русский
+        const ruVoice = voices.find(v => v.lang.startsWith('ru'));
+        if (ruVoice) {
+          utterance.voice = ruVoice;
+        }
       }
     }
 
@@ -170,21 +122,11 @@ export function useSpeech() {
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [settings]);
-
-  const speak = useCallback((text: string) => {
-    stop();
-
-    if (settings.engine === 'puter' && isPuterAvailable()) {
-      speakWithPuter(text);
-    } else {
-      speakWithBrowser(text);
-    }
-  }, [settings, stop, speakWithPuter, speakWithBrowser]);
+  }, [settings, stop]);
 
   const preview = useCallback((text: string = 'Привет! Так звучит мой голос.') => {
     speak(text);
   }, [speak]);
 
-  return { speak, stop, isSpeaking, settings, updateSettings, preview, isPuterAvailable: isPuterAvailable() };
+  return { speak, stop, isSpeaking, settings, updateSettings, preview };
 }
