@@ -35,28 +35,54 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHero, setShowHero] = useState(true);
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
+  const [autoSpeak, setAutoSpeak] = useState(true);
   const { speak, stop, isSpeaking, settings, updateSettings, preview } = useSpeech();
 
   useEffect(() => {
     setCompletedSections(prev => new Set([...prev, activeSection]));
   }, [activeSection]);
 
-  // Stop speech when changing sections
+  // Автостарт озвучки при смене слайда
   useEffect(() => {
-    stop();
-  }, [activeSection, stop]);
+    if (showHero) return;
+    if (!autoSpeak) return;
+
+    const currentSection = sections.find(s => s.id === activeSection);
+    if (currentSection) {
+      // Небольшая задержка чтобы контент успел отрисоваться
+      const timer = setTimeout(() => {
+        speak(currentSection.speechText);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [activeSection, showHero, autoSpeak, speak]);
 
   const handleStartLearning = () => {
     setShowHero(false);
     setActiveSection('what-is-github');
   };
 
+  const goToNext = () => {
+    const idx = sections.findIndex(s => s.id === activeSection);
+    if (idx < sections.length - 1) {
+      setActiveSection(sections[idx + 1].id);
+    } else {
+      setShowHero(true);
+    }
+  };
+
+  const goToPrev = () => {
+    const idx = sections.findIndex(s => s.id === activeSection);
+    if (idx > 0) setActiveSection(sections[idx - 1].id);
+  };
+
+  const currentIdx = sections.findIndex(s => s.id === activeSection);
+
   // Hero Screen
   if (showHero) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-950 to-purple-950 flex items-center justify-center p-4">
         <div className="max-w-3xl w-full text-center">
-          {/* Floating icons animation */}
           <div className="relative mb-8">
             <div className="absolute -top-4 -left-4 text-4xl animate-bounce" style={{animationDelay: '0s'}}>📁</div>
             <div className="absolute -top-2 -right-4 text-3xl animate-bounce" style={{animationDelay: '0.2s'}}>🔀</div>
@@ -72,7 +98,7 @@ function App() {
                 Изучите GitHub простыми словами
               </p>
               <p className="text-gray-400 mb-8 text-lg">
-                С картинками • С озвучкой • С настройками голоса
+                С картинками • С автоозвучкой • Без воды
               </p>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -97,7 +123,6 @@ function App() {
             </div>
           </div>
           
-          {/* Features */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <span className="text-3xl mb-2 block">🎨</span>
@@ -106,8 +131,8 @@ function App() {
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <span className="text-3xl mb-2 block">🔊</span>
-              <p className="text-white font-medium">С озвучкой</p>
-              <p className="text-gray-400 text-sm">Настройка скорости, тона, голоса</p>
+              <p className="text-white font-medium">Автоозвучка</p>
+              <p className="text-gray-400 text-sm">Голос читает при переходе</p>
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <span className="text-3xl mb-2 block">💡</span>
@@ -130,13 +155,25 @@ function App() {
             <div>
               <h1 className="text-lg md:text-xl font-bold">GitHub Помощник</h1>
               <p className="text-xs text-gray-400 hidden sm:block">
-                Простыми словами • {completedSections.size}/{sections.length} пройдено
+                {completedSections.size}/{sections.length} пройдено
                 {isSpeaking && <span className="ml-2 text-indigo-400 animate-pulse">🔊 озвучка...</span>}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Progress bar */}
+            {/* Auto-speak toggle */}
+            <button
+              onClick={() => setAutoSpeak(!autoSpeak)}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                autoSpeak 
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
+                  : 'bg-gray-700/50 text-gray-400 border border-gray-600'
+              }`}
+              title={autoSpeak ? 'Автоозвучка включена' : 'Автоозвучка выключена'}
+            >
+              {autoSpeak ? '🔊' : '🔇'} Авто
+            </button>
+            {/* Progress */}
             <div className="hidden md:flex items-center gap-2 bg-gray-700/50 rounded-full px-3 py-1.5">
               <div className="w-24 h-2 bg-gray-600 rounded-full overflow-hidden">
                 <div 
@@ -146,116 +183,133 @@ function App() {
               </div>
               <span className="text-xs text-gray-300">{Math.round((completedSections.size / sections.length) * 100)}%</span>
             </div>
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {menuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
-        {/* Sidebar Navigation */}
-        <nav className={`${menuOpen ? 'block' : 'hidden'} md:block md:w-60 flex-shrink-0`}>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sticky top-20">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Разделы</p>
-            <ul className="space-y-1">
-              {sections.map((section, idx) => (
-                <li key={section.id}>
-                  <button
-                    onClick={() => {
-                      setActiveSection(section.id);
-                      setMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2.5 text-sm ${
-                      activeSection === section.id
-                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="text-lg flex-shrink-0">{section.emoji}</span>
-                    <span className="font-medium truncate flex-1">{section.title}</span>
-                    {completedSections.has(section.id) && activeSection !== section.id && (
-                      <span className="text-green-500 text-xs flex-shrink-0">✓</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
-
-        {/* Main Content */}
-        <main className="flex-1 min-w-0">
-          {/* Progress dots */}
-          <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-2">
-            {sections.map((section, idx) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  activeSection === section.id
-                    ? 'bg-indigo-600 text-white scale-110 shadow-lg ring-2 ring-indigo-300'
-                    : completedSections.has(section.id)
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                }`}
-                title={section.title}
-              >
-                {completedSections.has(section.id) && activeSection !== section.id ? '✓' : idx + 1}
-              </button>
-            ))}
-          </div>
-
-          {/* Section Content */}
-          <SectionCard
-            section={sections.find(s => s.id === activeSection)!}
-            illustration={illustrations[activeSection]}
-            isActive={true}
-            isSpeaking={isSpeaking}
-            settings={settings}
-            onSpeak={speak}
-            onStop={stop}
-            onUpdateSettings={updateSettings}
-            onPreview={preview}
-          />
-
-          {/* Navigation buttons */}
-          <div className="flex justify-between mt-6 gap-4">
-            <button
-              onClick={() => {
-                const idx = sections.findIndex(s => s.id === activeSection);
-                if (idx > 0) setActiveSection(sections[idx - 1].id);
-              }}
-              disabled={activeSection === sections[0].id}
-              className="px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm flex-1 max-w-[150px]"
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        
+        {/* Dropdown для разделов */}
+        <div className="mb-6">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{sections[currentIdx]?.emoji}</span>
+              <div className="text-left">
+                <p className="text-xs text-gray-400 uppercase tracking-wider">Раздел {currentIdx + 1} из {sections.length}</p>
+                <p className="font-semibold text-gray-800">{sections[currentIdx]?.title}</p>
+              </div>
+            </div>
+            <svg
+              className={`w-6 h-6 text-gray-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
             >
-              ← Назад
-            </button>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Выпадающий список разделов */}
+          {menuOpen && (
+            <div className="mt-2 bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden animate-fadeIn">
+              <ul className="divide-y divide-gray-100">
+                {sections.map((section, idx) => (
+                  <li key={section.id}>
+                    <button
+                      onClick={() => {
+                        setActiveSection(section.id);
+                        setMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-5 py-3 flex items-center gap-3 transition-all ${
+                        activeSection === section.id
+                          ? 'bg-indigo-50 border-l-4 border-indigo-500'
+                          : 'hover:bg-gray-50 border-l-4 border-transparent'
+                      }`}
+                    >
+                      <span className="text-xl flex-shrink-0">{section.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium truncate ${
+                          activeSection === section.id ? 'text-indigo-700' : 'text-gray-800'
+                        }`}>
+                          {section.title}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{section.shortDesc}</p>
+                      </div>
+                      {completedSections.has(section.id) && (
+                        <span className="text-green-500 text-sm flex-shrink-0">✓</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-2 justify-center">
+          {sections.map((section, idx) => (
             <button
-              onClick={() => {
-                const idx = sections.findIndex(s => s.id === activeSection);
-                if (idx < sections.length - 1) {
-                  setActiveSection(sections[idx + 1].id);
-                } else {
-                  setShowHero(true);
-                }
-              }}
-              className="px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md flex-1 max-w-[150px]"
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                activeSection === section.id
+                  ? 'bg-indigo-600 text-white scale-110 shadow-lg ring-2 ring-indigo-300'
+                  : completedSections.has(section.id)
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+              }`}
+              title={section.title}
             >
-              {activeSection === sections[sections.length - 1].id ? '🎉 Готово!' : 'Далее →'}
+              {completedSections.has(section.id) && activeSection !== section.id ? '✓' : idx + 1}
             </button>
-          </div>
-        </main>
+          ))}
+        </div>
+
+        {/* Section Content */}
+        <SectionCard
+          section={sections[currentIdx]}
+          illustration={illustrations[activeSection]}
+          isActive={true}
+          isSpeaking={isSpeaking}
+          settings={settings}
+          onSpeak={speak}
+          onStop={stop}
+          onUpdateSettings={updateSettings}
+          onPreview={preview}
+        />
+
+        {/* Большая кнопка ДАЛЕЕ */}
+        <div className="mt-8">
+          <button
+            onClick={goToNext}
+            className="w-full py-5 px-8 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white text-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 group"
+          >
+            <span>
+              {currentIdx === sections.length - 1 ? '🎉 Завершить' : 'ДАЛЕЕ'}
+            </span>
+            <svg 
+              className="w-6 h-6 transition-transform group-hover:translate-x-1" 
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </button>
+          
+          {/* Кнопка назад (маленькая) */}
+          {currentIdx > 0 && (
+            <button
+              onClick={goToPrev}
+              className="w-full mt-3 py-3 px-6 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+              </svg>
+              Назад
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Footer */}
