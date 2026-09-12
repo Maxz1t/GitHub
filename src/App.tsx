@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { sections } from './data/sections';
 import { SectionCard } from './components/SectionCard';
-import { useSpeech } from './hooks/useSpeech';
+import { useSpeech, useRussianVoices } from './hooks/useSpeech';
 import {
   RepoIllustration,
   CommitIllustration,
@@ -42,10 +42,13 @@ function App() {
     setCompletedSections(prev => new Set([...prev, activeSection]));
   }, [activeSection]);
 
-  // Автостарт озвучки при смене слайда
+  // Автостарт озвучки при смене слайда (только если есть русские голоса)
+  const russianVoices = useRussianVoices();
+  
   useEffect(() => {
     if (showHero) return;
     if (!autoSpeak) return;
+    if (russianVoices.length === 0) return; // Не запускаем если нет русских голосов
 
     const currentSection = sections.find(s => s.id === activeSection);
     if (currentSection) {
@@ -55,7 +58,7 @@ function App() {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [activeSection, showHero, autoSpeak, speak]);
+  }, [activeSection, showHero, autoSpeak, speak, russianVoices.length]);
 
   const handleStartLearning = () => {
     setShowHero(false);
@@ -164,14 +167,21 @@ function App() {
             {/* Auto-speak toggle */}
             <button
               onClick={() => setAutoSpeak(!autoSpeak)}
+              disabled={russianVoices.length === 0}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                autoSpeak 
+                russianVoices.length === 0
+                  ? 'bg-gray-700/30 text-gray-500 border border-gray-600 cursor-not-allowed'
+                  : autoSpeak 
                   ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
                   : 'bg-gray-700/50 text-gray-400 border border-gray-600'
               }`}
-              title={autoSpeak ? 'Автоозвучка включена' : 'Автоозвучка выключена'}
+              title={
+                russianVoices.length === 0 
+                  ? 'Русские голоса не найдены' 
+                  : autoSpeak ? 'Автоозвучка включена' : 'Автоозвучка выключена'
+              }
             >
-              {autoSpeak ? '🔊' : '🔇'} Авто
+              {russianVoices.length === 0 ? '⚠️' : autoSpeak ? '🔊' : '🔇'} Авто
             </button>
             {/* Progress */}
             <div className="hidden md:flex items-center gap-2 bg-gray-700/50 rounded-full px-3 py-1.5">
@@ -188,6 +198,14 @@ function App() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        
+        {/* Предупреждение если нет русских голосов */}
+        {russianVoices.length === 0 && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+            <p className="font-semibold mb-1">⚠️ Русские голоса не найдены</p>
+            <p className="text-xs">Для озвучки используйте <strong>Google Chrome</strong> или установите русские языковые пакеты в системе. Настройки голоса доступны ниже.</p>
+          </div>
+        )}
         
         {/* Dropdown для разделов */}
         <div className="mb-6">
