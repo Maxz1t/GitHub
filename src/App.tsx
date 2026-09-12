@@ -36,7 +36,7 @@ function App() {
   const [showHero, setShowHero] = useState(true);
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const { speak, stop, isSpeaking, settings, updateSettings, preview } = useSpeech();
+  const { speak, stop, isSpeaking, settings, updateSettings, preview, isPuterAvailable } = useSpeech();
 
   useEffect(() => {
     setCompletedSections(prev => new Set([...prev, activeSection]));
@@ -296,6 +296,7 @@ function App() {
           onStop={stop}
           onUpdateSettings={updateSettings}
           onPreview={preview}
+          isPuterAvailable={isPuterAvailable}
         />
 
         {/* Большая кнопка ДАЛЕЕ */}

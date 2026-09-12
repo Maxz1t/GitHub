@@ -13,6 +13,7 @@ interface SectionCardProps {
   onStop: () => void;
   onUpdateSettings: (partial: Partial<SpeechSettings>) => void;
   onPreview: (text?: string) => void;
+  isPuterAvailable: boolean;
 }
 
 export const SectionCard: React.FC<SectionCardProps> = ({
@@ -24,6 +25,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   onStop,
   onUpdateSettings,
   onPreview,
+  isPuterAvailable,
 }) => {
   if (!isActive) return null;
 
@@ -84,6 +86,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         settings={settings}
         onUpdate={onUpdateSettings}
         onPreview={onPreview}
+        isPuterAvailable={isPuterAvailable}
       />
     </div>
   );
